@@ -8,6 +8,8 @@ const admin = require("firebase-admin");
 const port = process.env.PORT || 4000;
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
+app.use(cors());
+app.use(express.json())
 
 const decodedKey = Buffer.from(process.env.FB_SERVICE_KEY,'base64').toString('utf8');
 const serviceAccount = JSON.parse(decodedKey);
@@ -32,11 +34,11 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
+   // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
-    // Send a ping to confirm a successful connection
-    // await client.db("admin").command({ ping: 1 });
-    // console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    //Send a ping to confirm a successful connection
+    await client.db("admin").command({ ping: 1 });
+    console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
     const cosmeticsCollection = client.db('my_app').collection('cosmetics');
     const skinCollection = client.db('my_app').collection('skin');
@@ -49,7 +51,7 @@ async function run() {
 
 
     //middlewares\
-    const vayifyToken = async (req, res, next) => {
+    const verifyToken = async (req, res, next) => {
 
       if (!req.headers.authorization) {
         return res.status(401).send({ message: 'forbidden access' });
@@ -57,7 +59,7 @@ async function run() {
       }
       //verify the token
       try {
-        const decoded = await admin.auth().varifyIdToken(token);
+        const decoded = await admin.auth().verifyIdToken(token);
         req.decoded = decoded;
         next();
       }
@@ -209,8 +211,25 @@ app.patch('/orders/:id/confirm', async (req, res) => {
       const result = await userCollection.updateOne(filter, updatedDoc);
       res.send(result);
     })
+//skin api
+    app.post('/skin', async (req, res) => {
+      const newdata = req.body;
+      const result = await skinCollection.insertOne(newdata);
+      res.send(result);
 
-    //delete 
+    })
+    app.get('/skin', async (req, res) => {
+      const cursor = skinCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+    app.get('/skin/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await skinCollection.findOne(query);
+      res.send(result);
+
+    });
     app.delete('/skin/:id', async (req, res) => {
       console.log(req)
       const id = req.params.id;
@@ -219,174 +238,6 @@ app.patch('/orders/:id/confirm', async (req, res) => {
       console.log(result);
       res.send(result);
     })
-
-    app.delete('/cosmetics/:id', async (req, res) => {
-      console.log(req)
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) }
-      const result = await cosmeticsCollection.deleteOne(query);
-      console.log(result);
-      res.send(result);
-    })
-
-    app.delete('/makeupcosmetics/:id', async (req, res) => {
-      console.log(req)
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) }
-      const result = await makeupCollection.deleteOne(query);
-      console.log(result);
-      res.send(result);
-    })
-
-    app.delete('/babyCosmetics/:id', async (req, res) => {
-      console.log(req)
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) }
-      const result = await babyCollection.deleteOne(query);
-      console.log(result);
-      res.send(result);
-    })
-    app.delete('/cartItem/:id', async (req, res) => {
-      console.log(req)
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) }
-      const result = await cartCollection.deleteOne(query);
-      console.log(result);
-      res.send(result);
-    })
-
-    //all get method
-    app.get('/review', async (req, res) => {
-      const cursor = reviewCollection.find();
-      const result = await cursor.toArray();
-      res.send(result);
-    })
-    app.delete('/review/:id', async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) }
-      const result = await reviewCollection.findOne(query);
-      res.send(result);
-
-    });
-    app.get('/cosmetics', async (req, res) => {
-      const cursor = cosmeticsCollection.find();
-      const result = await cursor.toArray();
-      res.send(result);
-    })
-    app.get('/cosmetics/:id', async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) }
-      const result = await cosmeticsCollection.findOne(query);
-      res.send(result);
-
-    });
-
-    app.get('/skin', async (req, res) => {
-      const cursor = skinCollection.find();
-      const result = await cursor.toArray();
-      res.send(result);
-    })
-
-    app.get('/skin/:id', async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) }
-      const result = await skinCollection.findOne(query);
-      res.send(result);
-
-    });
-
-    app.get('/makeupcosmetics', async (req, res) => {
-      const cursor = makeupCollection.find();
-      const result = await cursor.toArray();
-      res.send(result);
-    })
-    app.get('/makeupcosmetics/:id', async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) }
-      const result = await makeupCollection.findOne(query);
-      res.send(result);
-
-    });
-
-    app.get('/babyCosmetics', async (req, res) => {
-      const cursor = babyCollection.find();
-      const result = await cursor.toArray();
-      res.send(result);
-    })
-    app.get('/babyCosmetics/:id', async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) }
-      const result = await babyCollection.findOne(query);
-      res.send(result);
-
-    });
-    app.get('/cartItem', async (req, res) => {
-      const email = req.query.email;
-      const query = { email: email };
-      const cursor = cartCollection.find(query);
-      const result = await cursor.toArray();
-      res.send(result);
-    })
-app.delete('/cartItem', async (req, res) => {
-  try {
-    const userEmail = req.query.email;
-    if (!userEmail) {
-      return res.status(400).json({ message: 'Email is required' });
-    }
-
-    const result = await cartCollection.deleteMany({ email: userEmail });
-    res.json({
-      deletedCount: result.deletedCount,
-      message: `${result.deletedCount} item(s) deleted for ${userEmail}`,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-    //all post method
-
-    app.post('/cosmetics', async (req, res) => {
-      const newdata = req.body;
-      const result = await cosmeticsCollection.insertOne(newdata);
-      res.send(result);
-
-    })
-
-    app.post('/skin', async (req, res) => {
-      const newdata = req.body;
-      const result = await skinCollection.insertOne(newdata);
-      res.send(result);
-
-    })
-
-    app.post('/makeupcosmetics', async (req, res) => {
-      const newdata = req.body;
-      const result = await makeupCollection.insertOne(newdata);
-      res.send(result);
-
-    })
-
-    app.post('/babyCosmetics', async (req, res) => {
-      const newdata = req.body;
-      const result = await babyCollection.insertOne(newdata);
-      res.send(result);
-
-    })
-    app.post('/cartItem', async (req, res) => {
-      const newdata = req.body;
-      const result = await cartCollection.insertOne(newdata);
-      res.send(result);
-
-    })
-    app.post('/review', async (req, res) => {
-      const newdata = req.body;
-      const result = await reviewCollection.insertOne(newdata);
-      res.send(result);
-
-    })
-    //put/update method
-
     app.put('/skin/:id', async (req, res) => {
       const id = req.params.id;
       const skinProduct = req.body;
@@ -405,23 +256,33 @@ app.delete('/cartItem', async (req, res) => {
       const result = await skinCollection.updateOne(filter, updateSkinProduct, options)
       res.send(result)
     })
-    app.put('/babyCosmetics/:id', async (req, res) => {
-      const id = req.params.id;
-      const babyProduct = req.body;
-      console.log(babyProduct);
-      const filter = { _id: new ObjectId(id) }
-      const options = { upsert: true }
-      const updatebabyProduct = {
 
-        $set: {
-          name: babyProduct.name,
-          price: babyProduct.price,
-          details: babyProduct.details,
-          expiration: babyProduct.expiration
-        }
-      }
-      const result = await babyCollection.updateOne(filter, updatebabyProduct, options)
-      res.send(result)
+//hair api  
+    app.delete('/cosmetics/:id', async (req, res) => {
+      console.log(req)
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await cosmeticsCollection.deleteOne(query);
+      console.log(result);
+      res.send(result);
+    })
+    app.get('/cosmetics', async (req, res) => {
+      const cursor = cosmeticsCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+    app.get('/cosmetics/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await cosmeticsCollection.findOne(query);
+      res.send(result);
+
+    });
+    app.post('/cosmetics', async (req, res) => {
+      const newdata = req.body;
+      const result = await cosmeticsCollection.insertOne(newdata);
+      res.send(result);
+
     })
     app.put('/cosmetics/:id', async (req, res) => {
       const id = req.params.id;
@@ -441,6 +302,32 @@ app.delete('/cartItem', async (req, res) => {
       const result = await cosmeticsCollection.updateOne(filter, updatehaiarCosmetics, options)
       res.send(result)
     })
+//makeUp
+    app.delete('/makeupcosmetics/:id', async (req, res) => {
+      console.log(req)
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await makeupCollection.deleteOne(query);
+      console.log(result);
+      res.send(result);
+    })
+    app.get('/makeupcosmetics', async (req, res) => {
+      const cursor = makeupCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+    app.get('/makeupcosmetics/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await makeupCollection.findOne(query);
+      res.send(result);
+
+    });
+    app.post('/makeupcosmetics', async (req, res) => {
+      const newdata = req.body;
+      const result = await makeupCollection.insertOne(newdata);
+      res.send(result);
+    })
     app.put('/makeupcosmetics/:id', async (req, res) => {
       const id = req.params.id;
       const makeUpCosmetics = req.body;
@@ -459,19 +346,119 @@ app.delete('/cartItem', async (req, res) => {
       const result = await makeupCollection.updateOne(filter, updatemakeUpCosmetics, options)
       res.send(result)
     })
+//Baby
+    app.delete('/babyCosmetics/:id', async (req, res) => {
+      console.log(req)
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await babyCollection.deleteOne(query);
+      console.log(result);
+      res.send(result);
+    })
+    app.get('/babyCosmetics', async (req, res) => {
+      const cursor = babyCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+    app.get('/babyCosmetics/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await babyCollection.findOne(query);
+      res.send(result);
+
+    });
+    app.post('/babyCosmetics', async (req, res) => {
+      const newdata = req.body;
+      const result = await babyCollection.insertOne(newdata);
+      res.send(result);
+    })
+    app.put('/babyCosmetics/:id', async (req, res) => {
+      const id = req.params.id;
+      const babyProduct = req.body;
+      console.log(babyProduct);
+      const filter = { _id: new ObjectId(id) }
+      const options = { upsert: true }
+      const updatebabyProduct = {
+
+        $set: {
+          name: babyProduct.name,
+          price: babyProduct.price,
+          details: babyProduct.details,
+          expiration: babyProduct.expiration
+        }
+      }
+      const result = await babyCollection.updateOne(filter, updatebabyProduct, options)
+      res.send(result)
+    })
+
+//cart Api
+    app.delete('/cartItem/:id', async (req, res) => {
+      console.log(req)
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await cartCollection.deleteOne(query);
+      console.log(result);
+      res.send(result);
+    })
+    app.get('/cartItem', async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const cursor = cartCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+    app.delete('/cartItem', async (req, res) => {
+  try {
+    const userEmail = req.query.email;
+    if (!userEmail) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    const result = await cartCollection.deleteMany({ email: userEmail });
+    res.json({
+      deletedCount: result.deletedCount,
+      message: `${result.deletedCount} item(s) deleted for ${userEmail}`,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+    });
+    app.post('/cartItem', async (req, res) => {
+      const newdata = req.body;
+      const result = await cartCollection.insertOne(newdata);
+      res.send(result);
+
+    })
+//reviwe api
+    app.get('/review', async (req, res) => {
+      const cursor = reviewCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+    app.delete('/review/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await reviewCollection.deleteOne(query);
+      res.send(result);
+
+    });
+    app.post('/review', async (req, res) => {
+      const newdata = req.body;
+      const result = await reviewCollection.insertOne(newdata);
+      res.send(result);
+
+    })
+   
   }
 
 
   finally {
-    // Ensures that the client will close when you finish/error
-    //await client.close();
+
+  //  await client.close();
   }
 }
 run().catch(console.dir);
-
-
-
-
 
 app.get('/', (req, res) => {
   res.send("server is running ");
