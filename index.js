@@ -8,8 +8,19 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 4000;
 
-// Middleware
-app.use(cors());
+// 🛑 1. CORS Configuration (UPDATED FOR PRODUCTION & LOCALHOST)
+app.use(cors({
+  origin: [
+    'http://localhost:3001', 
+    'http://localhost:3000'
+    // আপনার ফ্রন্টএন্ড যখন Vercel বা Netlify-তে ডিপ্লয় করবেন, সেই লিংকটি এখানে কমা দিয়ে যোগ করে দেবেন
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// 🛑 2. Parse JSON Requests (Must be right under CORS)
 app.use(express.json());
 
 // -------- Firebase Admin Initialization (Safe & Secure) ----------
@@ -73,7 +84,7 @@ async function run() {
       const token = authHeader.split(' ')[1];
 
       try {
-        // Option A: Verify via Firebase Admin (If you are using Firebase tokens on frontend)
+        // Option A: Verify via Firebase Admin
         const decoded = await admin.auth().verifyIdToken(token);
         req.decoded = decoded;
         next();
